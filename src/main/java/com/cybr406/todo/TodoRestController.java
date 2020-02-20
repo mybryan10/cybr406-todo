@@ -70,7 +70,7 @@ public class TodoRestController {
     }
 
     @PostMapping("/todos/{id}/tasks")
-    public ResponseEntity<Todo> AddingTasks(@PathVariable long id,@RequestBody Task task){
+    public ResponseEntity AddingTasks(@PathVariable long id,@RequestBody Task task){
 
         Todo todo = JSON.addTask(id, task);
 
