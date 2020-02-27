@@ -1,6 +1,8 @@
 package com.cybr406.todo;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.MultiValueMap;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.net.ssl.HttpsURLConnection;
 import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -35,22 +38,26 @@ import java.util.Optional;
 public class TodoRestController {
 
     @Autowired
-    InMemoryTodoRepository JSON;
+    TodoJpaRepository TodoJpaRepository ;
+
+    @Autowired
+    TaskJpaRepository TaskJpaRepository;
 
     @PostMapping("/todos")
-    public ResponseEntity<Todo> CreateToDo(@Valid @RequestBody Todo todo){
+    public ResponseEntity<Todo> CreateTodo(@Valid @RequestBody Todo todo){
 
         if(todo.getAuthor().isEmpty() || todo.getDetails().isEmpty()) {
             return new ResponseEntity<>(todo, HttpStatus.BAD_REQUEST);
         } else{
-            return new ResponseEntity<>(JSON.create(todo), HttpStatus.CREATED);
+            return new ResponseEntity<>(TodoJpaRepository.save(todo), HttpStatus.CREATED);
         }
     }
 
     @GetMapping("/todos/{id}")
     public ResponseEntity<Todo> ReturnTodoDetail(@PathVariable long id){
 
-        Optional<Todo> list = JSON.find(id);
+        //Optional<Todo> list = JSON.find(id);
+        Optional<Todo> list = TodoJpaRepository.findById(id);
 
         if (list.isPresent()) {
             Todo sample = list.get();
@@ -62,33 +69,41 @@ public class TodoRestController {
     }
 
     @GetMapping("/todos")
-    public ResponseEntity<List<Todo>> SubsetTodos(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size){
+    public Page<Todo> SubsetTodos(Pageable page){
 
-        List<Todo> BigList = JSON.findAll(page, size);
+        //List<Todo> BigList = TodoJpaRepository.findAll(page);
 
-        return new ResponseEntity<>(BigList, HttpStatus.OK);
+        //return new ResponseEntity<>(BigList, HttpStatus.OK);
+        return TodoJpaRepository.findAll(page);
     }
 
     @PostMapping("/todos/{id}/tasks")
     public ResponseEntity AddingTasks(@PathVariable long id,@RequestBody Task task){
 
-        Todo todo = JSON.addTask(id, task);
+        //Todo todo = JSON.addTask(id, task);
+        //List<Task> Lists = todo.getTasks();
 
-        List<Task> Lists = todo.getTasks();
+        Optional<Todo> todoOptional = TodoJpaRepository.findById(id);
 
-        if (!Lists.isEmpty()) {
+        if(todoOptional.isPresent()){
+            Todo todo = todoOptional.get();
+            todo.getTasks().add(task);
+            task.setTodo(todo);
+            TaskJpaRepository.save(task);
             return new ResponseEntity<>(todo, HttpStatus.CREATED);
-        } else {
+        } else{
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
+
     }
 
     @DeleteMapping("/todos/{id}")
     public ResponseEntity<Todo> DeletingTodos(@PathVariable long id){
 
-        try {
-            JSON.delete(id);
-        }catch (NoSuchElementException e){
+
+        if(TodoJpaRepository.existsById(id)){
+            TodoJpaRepository.deleteById(id);
+        }else{
             return  new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         return  new ResponseEntity<>(HttpStatus.NO_CONTENT);
@@ -97,9 +112,9 @@ public class TodoRestController {
     @DeleteMapping("/tasks/{id}")
     public ResponseEntity<Todo> DeletingTasks(@PathVariable long id){
 
-        try {
-            JSON.deleteTask(id);
-        }catch (NoSuchElementException e){
+        if(TaskJpaRepository.existsById(id)){
+            TaskJpaRepository.deleteById(id);
+        }else{
             return  new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         return  new ResponseEntity<>(HttpStatus.NO_CONTENT);
