@@ -23,7 +23,7 @@
             </column>
             <column name="COMPLETED" type="BOOLEAN" />
             <column name="DETAILS" type="CLOB" />
-            <column name="TODO_ID" type="CLOB" />
+            <column name="TODO_ID" type="BIGINT" />
         </createTable>
     </changeSet>
     <changeSet id="todo-id-index" author="Jaime">
